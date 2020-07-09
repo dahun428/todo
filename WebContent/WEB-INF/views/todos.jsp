@@ -14,6 +14,7 @@
 <script	src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
 </head>
 <body>
+<fmt:bundle basename="com.simple.resources.message">
 <div class="container">
 	<c:set value="todo" var="position"/>
 	<%@ include file="nav.jsp" %>
@@ -27,8 +28,9 @@
 					<form method="get" action="todos.hta" id="my-form">
 					<div class="row mb-3">
 						<div class="col-6 pt-2">
-							<strong class="mr-3">처리완료 : <span class="bg-success text-white py-1 px-3">3</span></strong>
-							<strong>미처리 : <span class="bg-primary text-white py-1 px-3">3</span></strong>
+						
+							<strong class="mr-3">처리완료 : <span class="bg-success text-white py-1 px-3"><fmt:formatNumber value="${clearTodo }"/></span></strong>
+							<strong>미처리 : <span class="bg-primary text-white py-1 px-3"><fmt:formatNumber value="${noClearTodo }"/></span></strong>
 						</div>
 						<div class="col-6 d-flex justify-content-end">
 							<select class="form-control mr-3" style="width: 100px; " name="rows">
@@ -68,7 +70,7 @@
 								<c:when test="${not empty todoList }">
 									<c:forEach items="${todoList }" var="todo" varStatus="status">
 										<tr>
-											<td>${(pagenation.pageNo - 1) * pagenation.pagesPerBlock + status.count }</td>
+											<td>${(pagenation.pageNo - 1) * pagenation.rowsPerPage + status.count }</td>
 											<td><a href="#" onclick="openTodoDetailModal(${todo.no})"><c:out value="${todo.title }"/></a></td>
 											<td><fmt:formatDate value="${todo.createdDate }"/> </td>
 											<td><c:out value="${todo.status }"/> </td>
@@ -181,63 +183,11 @@
 	</div>
 	
 	<!-- 상세정보 모달창 -->
-	<div class="modal" id="modal-todo-detail">
-		<div class="modal-dialog modal-lg">
- 			<div class="modal-content">
-   				<div class="modal-header">
-     				<h4 class="modal-title">상세 정보</h4>
-     				<button type="button" class="close" data-dismiss="modal">&times;</button>
-   				</div>
-   				<div class="modal-body">
-     				<div class="row">
-     					<div class="col-12">
-     						<table class="table table-bordered table-sm">
-     							<colgroup>
-     								<col width="15%">
-     								<col width="35%">
-     								<col width="15%">
-     								<col width="35%">
-     							</colgroup>
-     							<tbody>
-     								<tr>
-     									<th>제목</th>
-     									<td colspan="3" id="todo-title"></td>
-     								</tr>
-     								<tr>
-     									<th>작성자</th>
-     									<td id="todo-username"></td>
-     									<th>등록일</th>
-     									<td id="todo-createdate"></td>
-     								</tr>
-     								<tr>
-     									<th>상태</th>
-     									<td id="todo-status">처리예정</td>
-     									<th>예정일</th>
-     									<td id="todo-day"></td>
-     								</tr>
-     								<tr>
-     									<th style="vertical-align: middle;">내용</th>
-     									<td colspan="3"><small><span id="todo-content-detail"></span></small></td>
-     								</tr>
-     							</tbody>
-     						</table>
-     						<input type="hidden" name="todoNo" id="todo-no" value=""/>
-     					</div>
-     				</div>
-   				</div>
-   				<div class="modal-footer">
-     				<button type="button" class="btn btn-success btn-sm" id="detail-btn-process-end">처리완료</button>
-     				<button type="button" class="btn btn-info btn-sm" id="detail-btn-process-progress">처리중</button>
-     				<button type="button" class="btn btn-secondary btn-sm" id="detail-btn-process-delay">보류</button>
-     				<button type="button" class="btn btn-danger btn-sm" id="detail-btn-process-cancle">취소</button>
-     				<button type="button" class="btn btn-outline-dark btn-sm" data-dismiss="modal">닫기</button>
-   				</div>
- 			</div>
-		</div>
-	</div>
+	<%@ include file="detailmodal.jsp" %>
 	
 	<%@ include file="footer.jsp" %>	
 </div>
+</fmt:bundle>
 <script>
 	$(document).ready(function(){
 	
@@ -269,7 +219,6 @@
 		
 		endBtn.click(function(){
 			endBtn.updateFuncWithAjax();
-			console.log(1);
 		});
 		progressBtn.click(function(){
 			progressBtn.updateFuncWithAjax();
@@ -283,6 +232,7 @@
 		
 	});
 	$.fn.updateFuncWithAjax = function(){
+			var todoStatus = $('#todo-status');
 			var todoNo = $('#todo-no').val();
 			console.log('todoNo : ',todoNo);
 			var id = $(this).attr('id');
@@ -292,6 +242,7 @@
 			var statusName = '';
 			if(target === 'end'){
 				statusName = '처리완료';
+				todoStatus.text(statusName);
 			} else if (target === 'progress'){
 				statusName = '처리중';
 			} else if (target === 'delay'){
@@ -299,6 +250,7 @@
 			} else if (target === 'cancle'){
 				statusName = '취소';
 			}
+			todoStatus.text(statusName);
 			console.log(statusName);
 			$.ajax({
 				type:'post',
@@ -317,9 +269,9 @@
 
 	function openTodoDetailModal(no) {
 		$("#modal-todo-detail").modal('show');
-		
-		var todoNo = no;
+		$('#btn-todo-modify').css('display','none');
 
+		var todoNo = no;
 		var todoTitle = $('#todo-title');
 		var todoName = $('#todo-username');
 		var todoStatus = $('#todo-status');
@@ -327,6 +279,7 @@
 		var todoContent = $('#todo-content-detail');
 		var todoCreateDate = $('#todo-createdate');
 		var todoId = $('#todo-no');
+		var todoButton = $('#btn-todo-modify');
 		
 		$.ajax({
 			url:"get.hta",
@@ -345,7 +298,10 @@
 				var userName = data.userName;
 				var content = data.content;
 				var status = data.status;
-				
+				var isModifyCan = data.isModifyCan;
+				if(isModifyCan){
+					todoButton.css('display','block');
+				}
 				
 				todoId.val(no);
 				todoTitle.text(title);

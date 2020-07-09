@@ -16,6 +16,15 @@ import com.simple.vo.Todo;
 
 public class TodoDAO {
 
+	//정적 변수 self에 tododAo 객체를 담아둔다.
+	private static TodoDAO self = new TodoDAO();
+	//객체 생성을 막는다.
+	private TodoDAO() {}
+	
+	public static TodoDAO getInstanace() {
+		return self;
+	}
+	
 	 public void insertTodo(Todo todo) throws SQLException {
 
 		 String query = QueryUtil.getSQL("todo.insertTodo");
@@ -30,14 +39,14 @@ public class TodoDAO {
 			}
 		 }, todoNo);
 	 }
-//	 public List<Todo> getAllTodoByUserId(String userId) throws SQLException {
-//		 String query = QueryUtil.getSQL("todo.getAllTodo");
-//		 return JdbcHelper.selectList(query, new RowMapper<Todo>() {
-//			public Todo mapRow(ResultSet rs) throws SQLException {
-//				return resultFunc(rs);
-//			}
-//		}, userId);
-//	 }
+	 public List<Todo> getAllTodoByUserId(String userId) throws SQLException {
+		 String query = QueryUtil.getSQL("todo.getAllTodo");
+		 return JdbcHelper.selectList(query, new RowMapper<Todo>() {
+			public Todo mapRow(ResultSet rs) throws SQLException {
+				return resultFunc(rs);
+			}
+		}, userId);
+	 }
 //	 public List<Todo> getAllTodoPagination(String userId, int beginIndex, int endIndex) throws SQLException {
 //		 String query = QueryUtil.getSQL("todo.getAllTodoPagination");
 //		 return JdbcHelper.selectList(query, new RowMapper<Todo>() {
@@ -95,6 +104,14 @@ public class TodoDAO {
 		 });
 				 
 	 }
+	 public List<TodoDto> getRecentTodosMore(int beginIndex, int lastIndex) throws SQLException {
+		 String query = QueryUtil.getSQL("todo.getRecentTodosMore");
+		 return JdbcHelper.selectList(query, new RowMapper<TodoDto>() {
+			public TodoDto mapRow(ResultSet rs) throws SQLException {
+				return resultFuncDto(rs);
+			}
+		 }, beginIndex, lastIndex);
+	 }
 	 public TodoDto getTodoDtoByNo(int todoNo) throws SQLException {
 		 String query = QueryUtil.getSQL("todo.getTodoDtoByNo");
 		 return JdbcHelper.selectOne(query, new RowMapper<TodoDto>() {
@@ -110,31 +127,39 @@ public class TodoDAO {
 		 List<Todo> todos = new ArrayList<Todo>();
 		 
 		 StringBuffer sb = new StringBuffer();
-		 String startQuery = "select * from" + 
-		 		"					        (SELECT todo_no, todo_title, todo_content, todo_day, todo_completed_day," + 
-		 		"					                todo_status, user_id, todo_create_date , " + 
-		 		"					                row_number() over (order by todo_create_date desc) rn" + 
-		 		"					        FROM SAMPLE_TODOS" + 
-		 		"					        WHERE USER_ID = ? ) where rn >= ? and rn <= ? ";
-		 String todoStatusStr = (status != null && !status.isEmpty()) ? "and todo_status = ? " : "";
-		 String keywordStr = (keyword != null && !keyword.isEmpty()) ? "and todo_title like '%'|| ? ||'%' " : "" ;
+		 String startQuery = "select * from " + 
+		 		"		 						        (SELECT todo_no, todo_title, todo_content, todo_day, todo_completed_day, " + 
+		 		"		 						                todo_status, user_id, todo_create_date ,  " + 
+		 		"		 						                row_number() over (order by todo_create_date desc) rn " + 
+		 		"		 						        FROM SAMPLE_TODOS " + 
+		 		"		 						        WHERE USER_ID = ? ";
 
-		 String query = sb.append(startQuery).append(todoStatusStr).append(keywordStr).toString();
+		 
+		 
+		 String todoStatusStr = (status != null && !status.isEmpty()) ? "and todo_status = ? )" : ")";
+		 String endQuery = "where rn >= ? and rn <= ? ";
+		 String keywordStr = (keyword != null && !keyword.isEmpty()) ? "and todo_title like '%'|| ? ||'%' " : " " ;
+		 
+		 
+		 
+		 String query = sb.append(startQuery).append(todoStatusStr).append(endQuery).append(keywordStr).toString();
 		 
 		 Connection conn = ConnectionUtil.getConnection();
 		 PreparedStatement pstmt = conn.prepareStatement(query);
-		 pstmt.setString(1, userId);
-		 pstmt.setInt(2, beginIndex);
-		 pstmt.setInt(3, endIndex);
-
-		 int count = 4;
+		 
+		 int count = 1;
+		 pstmt.setString(count++, userId);
+		 
 		 if(status != null && !status.isEmpty()) {
 			 pstmt.setString(count, status);
 			 count++;
 		 }
+		 pstmt.setInt(count++, beginIndex);
+		 pstmt.setInt(count++, endIndex);
 		 if(keyword != null && !keyword.isEmpty()) {
 			 pstmt.setString(count, keyword);
 		 }
+
 		 ResultSet rs = pstmt.executeQuery();
 		 while(rs.next()) {
 			 Todo todo = resultFunc(rs);
@@ -143,6 +168,7 @@ public class TodoDAO {
 		 if(rs != null) rs.close();
 		 if(pstmt != null) pstmt.close();
 		 if(conn != null) conn.close();
+		 System.out.println("query : " + query);
 		 
 		 return todos;
 	 }
@@ -175,10 +201,12 @@ public class TodoDAO {
 		 if(conn != null) conn.close();
 		 return -1; 
 	 }
-	 public void updateTodoByNo(String status, int todoNo) throws SQLException {
+	 public void updateTodoByNo(Todo todo) throws SQLException {
 		 
+		 System.out.println("updateTodo : " + todo);
 		 String query = QueryUtil.getSQL("todo.updateTodoByNo");
-		 JdbcHelper.update(query, status, todoNo);
+		 JdbcHelper.update(query, todo.getStatus(), todo.getCompletedDay(), todo.getNo());
+		 
 	 }
 	 
 	 

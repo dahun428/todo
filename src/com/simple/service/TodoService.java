@@ -1,6 +1,7 @@
 package com.simple.service;
 
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
 
 import com.simple.dao.TodoDAO;
@@ -13,7 +14,7 @@ import com.simple.vo.User;
 public class TodoService {
 
 	UserDAO userDao = new UserDAO();
-	TodoDAO todoDao = new TodoDAO();
+	TodoDAO todoDao = TodoDAO.getInstanace();
 	public boolean addNewTodo(Todo todo) throws Exception {
 	
 		User user = userDao.getUserById(todo.getUserId());
@@ -27,9 +28,29 @@ public class TodoService {
 		todoDao.insertTodo(todo);
 		return true;
 	}
-//	public List<Todo> getAllTodoByUserId(String userId) throws Exception {
-//		return todoDao.getAllTodoByUserId(userId);
-//	}
+	public int getTodoByCountFinishedByUserId(String userId) throws Exception {
+		List<Todo> todos = todoDao.getAllTodoByUserId(userId);
+		int count = 0;
+		for(Todo todo : todos) {
+			if(todo.getStatus().equals("처리완료")) {
+				count++;
+			}
+		}
+		return count;
+	}
+	public int getTodoByCountNoFinishedByUserId(String userId) throws Exception {
+		List<Todo> todos = todoDao.getAllTodoByUserId(userId);
+		int count = 0;
+		for(Todo todo : todos) {
+			if(!todo.getStatus().equals("처리완료")) {
+				count++;
+			}
+		}
+		return count;
+	}
+	public List<Todo> getAllTodoByUserId(String userId) throws Exception {
+		return todoDao.getAllTodoByUserId(userId);
+	}
 //	public List<Todo> getAllTodoPagination(String userId, int beginIndex, int endIndex) throws Exception {
 //		return todoDao.getAllTodoPagination(userId, beginIndex, endIndex);
 //	}
@@ -52,6 +73,10 @@ public class TodoService {
 	public List<TodoDto> getRecentTodos () throws Exception {
 		return todoDao.getRecentTodos();
 	}
+	public List<TodoDto> getRecentTodosMore (int beginIndex, int lastIndex) throws Exception {
+		return todoDao.getRecentTodosMore(beginIndex, lastIndex);
+	}
+	
 	public TodoDto getTodoDtoByNo(int todoNo) throws Exception {
 		return todoDao.getTodoDtoByNo(todoNo);
 	}
@@ -68,6 +93,16 @@ public class TodoService {
 		return todoDao.getAllTodosPaginationCount(todo.getUserId(), todo.getStatus(), keyword);
 	}
 	public void updateTodoByNo(String status, int todoNo) throws SQLException {
-		todoDao.updateTodoByNo(status, todoNo);
+		Todo todo = todoDao.getTodoByNo(todoNo);
+		if(todo == null) {
+			return;
+		}
+		if("처리완료".equals(status)) {
+			todo.setCompletedDay(new Date());
+		} else {
+			todo.setCompletedDay(null);
+		}
+		todo.setStatus(status);
+		todoDao.updateTodoByNo(todo);
 	}
 }

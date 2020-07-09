@@ -53,10 +53,17 @@ public class TodoController {
 		int pageNo = NumberUtil.stringToInt(req.getParameter("page"), 1);
 		int totalRows = todoService.getAllTodosPaginationByTodoCount(todo, keyword);
 		Pagenation pagenation = new Pagenation(rowsPerPage, pagesPerBlock, pageNo, totalRows, keyword);
-		
+		System.out.println("pagenation value : " + pagenation);
 		//List
 		List<Todo> todos = todoService.getAllTodosPaginationByTodo(todo, pagenation);
-
+		System.out.println("todo : " + todo);
+		System.out.println("todo list : " + todos);
+		
+		int finishedTodo = todoService.getTodoByCountFinishedByUserId(user.getId());
+		int noFinishedTodo = todoService.getTodoByCountNoFinishedByUserId(user.getId());
+		
+		mav.addAttribute("noClearTodo", noFinishedTodo);
+		mav.addAttribute("clearTodo", finishedTodo);
 		mav.addAttribute("keyword", keyword);
 		mav.addAttribute("status", status);
 		mav.addAttribute("rows", rowsPerPage);
